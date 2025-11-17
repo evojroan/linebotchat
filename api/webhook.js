@@ -3,7 +3,7 @@ const https = require("https");
 const TOKEN = process.env.LINE_ACCESS_TOKEN;
 
 module.exports = async (req, res) => {
-  // 允許所有方法通過
+  // 處理 GET 請求（用於驗證）
   if (req.method === "GET") {
     return res.status(200).send("OK");
   }
@@ -13,16 +13,19 @@ module.exports = async (req, res) => {
   }
 
   try {
-    console.log("Request body:", JSON.stringify(req.body));
+    console.log("收到請求，body:", JSON.stringify(req.body));
 
+    // 檢查請求體
     if (!req.body || !req.body.events || req.body.events.length === 0) {
+      console.log("空的 events 陣列");
       return res.status(200).send("OK");
     }
 
     const event = req.body.events[0];
 
-    // LINE Webhook 驗證
+    // LINE Webhook 驗證請求
     if (event.replyToken === "00000000000000000000000000000000") {
+      console.log("驗證請求");
       return res.status(200).send("OK");
     }
 
@@ -60,13 +63,13 @@ module.exports = async (req, res) => {
             data += chunk;
           });
           apiRes.on("end", () => {
-            console.log("LINE API Response:", data);
+            console.log("LINE API 回應:", data);
             resolve();
           });
         });
 
         request.on("error", (err) => {
-          console.error("Request error:", err);
+          console.error("請求錯誤:", err);
           reject(err);
         });
 
@@ -77,7 +80,7 @@ module.exports = async (req, res) => {
 
     return res.status(200).send("OK");
   } catch (error) {
-    console.error("Error:", error);
+    console.error("錯誤:", error);
     return res.status(200).send("OK");
   }
 };
