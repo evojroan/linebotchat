@@ -1,7 +1,12 @@
+require("dotenv").config();
 const https = require("https");
 const TOKEN = process.env.LINE_ACCESS_TOKEN;
 
 function handleWebhook(req, res) {
+  if (req.method === "GET" && req.url === "/") {
+    return res.status(200).send("OK");
+  }
+
   if (req.method !== "POST") {
     return res.status(405).send("Method Not Allowed");
   }
