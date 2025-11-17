@@ -11,15 +11,12 @@ function handleWebhook(req, res) {
     return res.status(405).send("Method Not Allowed");
   }
 
-  // 加入錯誤處理
   try {
-    // 檢查請求體
     if (!req.body || !req.body.events || req.body.events.length === 0) {
       console.log("Empty events array");
-      return res.status(200).send("No events to process");
+      return res.status(200).send("OK");
     }
 
-    // LINE Webhook 驗證請求
     if (req.body.events[0].replyToken === "00000000000000000000000000000000") {
       console.log("Verification request");
       return res.status(200).send("OK");
@@ -43,6 +40,7 @@ function handleWebhook(req, res) {
       const headers = {
         "Content-Type": "application/json",
         Authorization: "Bearer " + TOKEN,
+        "Content-Length": Buffer.byteLength(dataString),
       };
 
       const webhookOptions = {
@@ -50,30 +48,42 @@ function handleWebhook(req, res) {
         path: "/v2/bot/message/reply",
         method: "POST",
         headers: headers,
-        body: dataString,
       };
 
       const request = https.request(webhookOptions, (apiRes) => {
-        apiRes.on("data", (d) => {
-          process.stdout.write(d);
+        let data = "";
+        apiRes.on("data", (chunk) => {
+          data += chunk;
+        });
+        apiRes.on("end", () => {
+          console.log("LINE API response:", data);
+          // 在收到 LINE API 回應後才回傳
+          if (!res.headersSent) {
+            res.status(200).send("OK");
+          }
         });
       });
 
       request.on("error", (err) => {
-        console.error(err);
-        res.status(500).send("Error");
+        console.error("Request error:", err);
+        // 發生錯誤時才回傳
+        if (!res.headersSent) {
+          res.status(200).send("OK");
+        }
       });
 
       request.write(dataString);
       request.end();
 
-      res.send("HTTP POST request sent to the webhook URL!");
+      // 不要在這裡回傳回應
     } else {
-      res.sendStatus(200);
+      res.status(200).send("OK");
     }
   } catch (error) {
     console.error("Error:", error);
-    return res.status(200).send("OK"); // 即使錯誤也回傳 200 給 LINE
+    if (!res.headersSent) {
+      return res.status(200).send("OK");
+    }
   }
 }
 
